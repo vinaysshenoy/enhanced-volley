@@ -109,7 +109,7 @@ public class AnimateImageView extends ImageView implements Animation.AnimationLi
 
                 if(inAnimationResId == 0) {
                     mInAnimation = new AlphaAnimation(0.0f, 1.0f);
-                    mInAnimation.setDuration(250);
+                    mInAnimation.setDuration(400);
                     mInAnimation.setFillAfter(true);
                 } else {
                     mInAnimation = AnimationUtils.loadAnimation(context, inAnimationResId);
@@ -117,7 +117,7 @@ public class AnimateImageView extends ImageView implements Animation.AnimationLi
 
                 if(outAnimationResId == 0) {
                     mOutAnimation = new AlphaAnimation(1.0f, 0.0f);
-                    mOutAnimation.setDuration(75);
+                    mOutAnimation.setDuration(150);
                     mOutAnimation.setFillAfter(true);
                 } else {
                     mOutAnimation = AnimationUtils.loadAnimation(context, outAnimationResId);
