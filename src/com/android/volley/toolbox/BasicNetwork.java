@@ -123,8 +123,6 @@ public class BasicNetwork implements Network {
                             statusCode == HttpStatus.SC_FORBIDDEN) {
                         attemptRetryOnException("auth",
                                 request, new AuthFailureError(networkResponse));
-                    } else if(statusCode == HttpStatus.SC_BAD_REQUEST) {
-                        throw new BadRequestError(networkResponse);
                     } else {
                         // TODO: Only throw ServerError for 5xx status codes.
                         throw new ServerError(networkResponse);
