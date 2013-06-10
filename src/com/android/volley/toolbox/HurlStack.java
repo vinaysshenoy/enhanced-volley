@@ -56,15 +56,18 @@ public class HurlStack implements HttpStack {
     private final SSLSocketFactory mSslSocketFactory;
 
     /**
-     * @param urlRewriter Rewriter to use for request URLs
+     * @param urlRewriter
+     *            Rewriter to use for request URLs
      */
     public HurlStack(UrlRewriter urlRewriter) {
         this(urlRewriter, null);
     }
 
     /**
-     * @param urlRewriter Rewriter to use for request URLs
-     * @param sslSocketFactory SSL factory to use for HTTPS connections
+     * @param urlRewriter
+     *            Rewriter to use for request URLs
+     * @param sslSocketFactory
+     *            SSL factory to use for HTTPS connections
      */
     public HurlStack(UrlRewriter urlRewriter, SSLSocketFactory sslSocketFactory) {
         mUrlRewriter = urlRewriter;
@@ -72,8 +75,7 @@ public class HurlStack implements HttpStack {
     }
 
     @Override
-    public HttpResponse performRequest(Request<?> request, Map<String, String> additionalHeaders)
-            throws IOException, AuthFailureError {
+    public HttpResponse performRequest(Request<?> request, Map<String, String> additionalHeaders) throws IOException, AuthFailureError {
         HashMap<String, String> map = new HashMap<String, String>();
         map.putAll(request.getHeaders());
         map.putAll(additionalHeaders);
@@ -87,12 +89,13 @@ public class HurlStack implements HttpStack {
         ProtocolVersion protocolVersion = new ProtocolVersion("HTTP", 1, 1);
         int responseCode = connection.getResponseCode();
         if (responseCode == -1) {
-            // -1 is returned by getResponseCode() if the response code could not be retrieved.
-            // Signal to the caller that something was wrong with the connection.
+            // -1 is returned by getResponseCode() if the response code could
+            // not be retrieved.
+            // Signal to the caller that something was wrong with the
+            // connection.
             throw new IOException("Could not retrieve response code from HttpUrlConnection.");
         }
-        StatusLine responseStatus = new BasicStatusLine(protocolVersion,
-                connection.getResponseCode(), connection.getResponseMessage());
+        StatusLine responseStatus = new BasicStatusLine(protocolVersion, connection.getResponseCode(), connection.getResponseMessage());
         BasicHttpResponse response = new BasicHttpResponse(responseStatus);
         response.setEntity(entityFromConnection(connection));
         for (Entry<String, List<String>> header : connection.getHeaderFields().entrySet()) {
@@ -105,7 +108,9 @@ public class HurlStack implements HttpStack {
     }
 
     /**
-     * Initializes an {@link HttpEntity} from the given {@link HttpURLConnection}.
+     * Initializes an {@link HttpEntity} from the given
+     * {@link HttpURLConnection}.
+     * 
      * @param connection
      * @return an HttpEntity populated with data from <code>connection</code>.
      */
@@ -125,13 +130,21 @@ public class HurlStack implements HttpStack {
     }
 
     /**
+     * Create an {@link HttpURLConnection} for the specified {@code url}.
+     */
+    protected HttpURLConnection createConnection(URL url) throws IOException {
+        return (HttpURLConnection) url.openConnection();
+    }
+
+    /**
      * Opens an {@link HttpURLConnection} with parameters.
+     * 
      * @param url
      * @return an open connection
      * @throws IOException
      */
     private HttpURLConnection openConnection(URL url, Request<?> request) throws IOException {
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        HttpURLConnection connection = createConnection(url);
 
         int timeoutMs = request.getTimeoutMs();
         connection.setConnectTimeout(timeoutMs);
@@ -141,39 +154,38 @@ public class HurlStack implements HttpStack {
 
         // use caller-provided custom SslSocketFactory, if any, for HTTPS
         if ("https".equals(url.getProtocol()) && mSslSocketFactory != null) {
-            ((HttpsURLConnection)connection).setSSLSocketFactory(mSslSocketFactory);
+            ((HttpsURLConnection) connection).setSSLSocketFactory(mSslSocketFactory);
         }
 
         return connection;
     }
 
     @SuppressWarnings("deprecation")
-    /* package */ static void setConnectionParametersForRequest(HttpURLConnection connection,
-            Request<?> request) throws IOException, AuthFailureError {
+    /* package */static void setConnectionParametersForRequest(HttpURLConnection connection, Request<?> request) throws IOException, AuthFailureError {
         switch (request.getMethod()) {
-            case Method.GET:
-                // Not necessary to set the request method because connection defaults to GET but
-                // being explicit here.
-                connection.setRequestMethod("GET");
-                break;
-            case Method.DELETE:
-                connection.setRequestMethod("DELETE");
-                break;
-            case Method.POST:
-                connection.setRequestMethod("POST");
-                addBodyIfExists(connection, request);
-                break;
-            case Method.PUT:
-                connection.setRequestMethod("PUT");
-                addBodyIfExists(connection, request);
-                break;
-            default:
-                throw new IllegalStateException("Unknown method type.");
+        case Method.GET:
+            // Not necessary to set the request method because connection
+            // defaults to GET but
+            // being explicit here.
+            connection.setRequestMethod("GET");
+            break;
+        case Method.DELETE:
+            connection.setRequestMethod("DELETE");
+            break;
+        case Method.POST:
+            connection.setRequestMethod("POST");
+            addBodyIfExists(connection, request);
+            break;
+        case Method.PUT:
+            connection.setRequestMethod("PUT");
+            addBodyIfExists(connection, request);
+            break;
+        default:
+            throw new IllegalStateException("Unknown method type.");
         }
     }
 
-    private static void addBodyIfExists(HttpURLConnection connection, Request<?> request)
-            throws IOException, AuthFailureError {
+    private static void addBodyIfExists(HttpURLConnection connection, Request<?> request) throws IOException, AuthFailureError {
         byte[] body = request.getBody();
         if (body != null) {
             connection.setDoOutput(true);
