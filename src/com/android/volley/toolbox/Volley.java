@@ -38,12 +38,17 @@ public class Volley {
     private static final String DEFAULT_CACHE_DIR = "volley";
 
     /**
-     * Creates a default instance of the worker pool and calls {@link RequestQueue#start()} on it.
-     *
-     * @param context A {@link Context} to use for creating the cache dir.
+     * Creates a default instance of the worker pool and calls
+     * {@link RequestQueue#start()} on it.
+     * 
+     * @param context
+     *            A {@link Context} to use for creating the cache dir.
+     * @param stack
+     *            An {@link HttpStack} to use for the network, or null for
+     *            default.
      * @return A started {@link RequestQueue} instance.
      */
-    public static RequestQueue newRequestQueue(Context context) {
+    public static RequestQueue newRequestQueue(Context context, HttpStack stack) {
         File cacheDir = new File(context.getCacheDir(), DEFAULT_CACHE_DIR);
 
         String userAgent = "volley/0";
@@ -55,13 +60,15 @@ public class Volley {
         } catch (NameNotFoundException e) {
         }
 
-        HttpStack stack;
-        if (Build.VERSION.SDK_INT >= 9) {
-            stack = new HurlStack(new BasicUrlRewriter());
-        } else {
-            // Prior to Gingerbread, HttpUrlConnection was unreliable.
-            // See: http://android-developers.blogspot.com/2011/09/androids-http-clients.html
-            stack = new HttpClientStack(AndroidHttpClient.newInstance(userAgent), new BasicUrlRewriter());
+        if (stack == null) {
+            if (Build.VERSION.SDK_INT >= 9) {
+                stack = new HurlStack(new BasicUrlRewriter());
+            } else {
+                // Prior to Gingerbread, HttpUrlConnection was unreliable.
+                // See:
+                // http://android-developers.blogspot.com/2011/09/androids-http-clients.html
+                stack = new HttpClientStack(AndroidHttpClient.newInstance(userAgent), new BasicUrlRewriter());
+            }
         }
 
         Network network = new BasicNetwork(stack);
@@ -71,46 +78,56 @@ public class Volley {
 
         return queue;
     }
+    
+    /**
+     * Creates a default instance of the worker pool and calls {@link RequestQueue#start()} on it.
+     *
+     * @param context A {@link Context} to use for creating the cache dir.
+     * @return A started {@link RequestQueue} instance.
+     */
+    public static RequestQueue newRequestQueue(Context context) {
+        return newRequestQueue(context, null);
+    }
 
     /**
-     * Class to automatically rewrite URLs for GET methods based on whether
-     * the request has params or not
+     * Class to automatically rewrite URLs for GET methods based on whether the
+     * request has params or not
      */
     private static class BasicUrlRewriter implements HttpStack.UrlRewriter {
 
         @Override
         public String rewriteUrl(Request<?> request) throws IOException {
 
-            switch(request.getMethod()) {
+            switch (request.getMethod()) {
 
-                case Request.Method.GET:
-                case Request.Method.DELETE: {
+            case Request.Method.GET:
+            case Request.Method.DELETE: {
 
-                    String url = request.getUrl();
+                String url = request.getUrl();
 
-                    try {
-                        String encodedParams = request.getEncodedUrlBody();
+                try {
+                    String encodedParams = request.getEncodedUrlBody();
 
-                        if (encodedParams != null && encodedParams.length() > 0) {
-                            if (!url.endsWith("?")) {
-                                url += "?";
-                            }
-                            url += encodedParams;
+                    if (encodedParams != null && encodedParams.length() > 0) {
+                        if (!url.endsWith("?")) {
+                            url += "?";
                         }
-
-                    } catch (AuthFailureError e) {
-                        return null;
+                        url += encodedParams;
                     }
-                    return url;
-                }
 
-                case Request.Method.POST:
-                case Request.Method.PUT: {
-                    return request.getUrl();
+                } catch (AuthFailureError e) {
+                    return null;
                 }
+                return url;
+            }
 
-                default:
-                    throw new IllegalStateException("Unknown request method.");
+            case Request.Method.POST:
+            case Request.Method.PUT: {
+                return request.getUrl();
+            }
+
+            default:
+                throw new IllegalStateException("Unknown request method.");
 
             }
         }
