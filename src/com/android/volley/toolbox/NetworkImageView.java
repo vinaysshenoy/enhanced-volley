@@ -22,7 +22,9 @@ import android.content.res.TypedArray;
 import android.text.TextUtils;
 import android.util.AttributeSet;
 
+import com.android.volley.VolleyError;
 import com.android.volley.toolbox.ImageLoader.ImageContainer;
+import com.android.volley.toolbox.ImageLoader.ImageListener;
 import com.vinaysshenoy.volleyenhanced.R;
 
 /**
@@ -107,7 +109,7 @@ public class NetworkImageView extends AnimateImageView {
         mUrl = url;
         mImageLoader = imageLoader;
         // The URL has potentially changed. See if we need to load it.
-        loadImageIfNecessary();
+        loadImageIfNecessary(false);
     }
 
 
@@ -130,8 +132,9 @@ public class NetworkImageView extends AnimateImageView {
 
     /**
      * Loads the image for the view if it isn't already loaded.
+     * @param isInLayoutPass True if this was invoked from a layout pass, false otherwise.
      */
-    private void loadImageIfNecessary() {
+    private void loadImageIfNecessary(final boolean isInLayoutPass) {
         int width = getWidth();
         int height = getHeight();
 
@@ -166,7 +169,37 @@ public class NetworkImageView extends AnimateImageView {
         // The pre-existing content of this view didn't match the current URL. Load the new image
         // from the network.
         ImageContainer newContainer = mImageLoader.get(mUrl,
-                ImageLoader.getImageListener(this, mDefaultImageId, mErrorImageId));
+                new ImageListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        if (mErrorImageId != 0) {
+                            setImageResource(mErrorImageId);
+                        }
+                    }
+
+                    @Override
+                    public void onResponse(final ImageContainer response, boolean isImmediate) {
+                        // If this was an immediate response that was delivered inside of a layout
+                        // pass do not set the image immediately as it will trigger a requestLayout
+                        // inside of a layout. Instead, defer setting the image by posting back to
+                        // the main thread.
+                        if (isImmediate && isInLayoutPass) {
+                            post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    onResponse(response, false);
+                                }
+                            });
+                            return;
+                        }
+
+                        if (response.getBitmap() != null) {
+                            setImageBitmap(response.getBitmap());
+                        } else if (mDefaultImageId != 0) {
+                            setImageResource(mDefaultImageId);
+                        }
+                    }
+                });
 
         // update the ImageContainer to be the new bitmap container.
         mImageContainer = newContainer;
@@ -175,7 +208,7 @@ public class NetworkImageView extends AnimateImageView {
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
         super.onLayout(changed, left, top, right, bottom);
-        loadImageIfNecessary();
+        loadImageIfNecessary(true);
     }
 
     @Override
