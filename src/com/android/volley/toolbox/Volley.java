@@ -62,7 +62,7 @@ public class Volley {
 
         if (stack == null) {
             if (Build.VERSION.SDK_INT >= 9) {
-                stack = new HurlStack(new BasicUrlRewriter());
+                stack = new HurlStack(new BasicUrlRewriter(), userAgent);
             } else {
                 // Prior to Gingerbread, HttpUrlConnection was unreliable.
                 // See:
@@ -100,8 +100,7 @@ public class Volley {
 
             switch (request.getMethod()) {
 
-            case Request.Method.GET:
-            case Request.Method.DELETE: {
+            case Request.Method.GET: {
 
                 String url = request.getUrl();
 
@@ -122,7 +121,8 @@ public class Volley {
             }
 
             case Request.Method.POST:
-            case Request.Method.PUT: {
+            case Request.Method.PUT:
+            case Request.Method.DELETE: {
                 return request.getUrl();
             }
 
