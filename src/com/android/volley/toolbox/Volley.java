@@ -28,6 +28,7 @@ import com.android.volley.AuthFailureError;
 import com.android.volley.Network;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
+import com.android.volley.VolleyLog;
 
 import java.io.File;
 import java.io.IOException;
@@ -77,6 +78,14 @@ public class Volley {
         queue.start();
 
         return queue;
+    }
+    
+    /**
+     * Set Logs to enabled or disabled
+     * @param isLoggable <code>true</code> to enable Logs, <code>false</code> to disable logs
+     */
+    public static void setLoggable(boolean isLoggable) {
+        VolleyLog.sDebug = isLoggable;
     }
     
     /**
