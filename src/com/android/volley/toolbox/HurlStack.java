@@ -18,10 +18,25 @@
 
 package com.android.volley.toolbox;
 
-import com.android.volley.AuthFailureError;
-import com.android.volley.Request;
-import com.android.volley.Request.Method;
-import com.android.volley.toolbox.HttpStack.UrlRewriter;
+import java.io.BufferedInputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.net.HttpURLConnection;
+import java.net.ProtocolException;
+import java.net.URL;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLSocketFactory;
 
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
@@ -33,18 +48,10 @@ import org.apache.http.message.BasicHeader;
 import org.apache.http.message.BasicHttpResponse;
 import org.apache.http.message.BasicStatusLine;
 
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLSocketFactory;
+import com.android.volley.AuthFailureError;
+import com.android.volley.Request;
+import com.android.volley.Request.Method;
+import com.android.volley.toolbox.MultiPartRequest.MultiPartParam;
 
 /**
  * An {@link HttpStack} based on {@link HttpURLConnection}.
@@ -53,6 +60,15 @@ public class HurlStack implements HttpStack {
 
     private static final String    HEADER_CONTENT_TYPE = "Content-Type";
     private static final String    HEADER_USER_AGENT   = "User-Agent";
+    private static final String    HEADER_CONTENT_DISPOSITION       = "Content-Disposition";
+    private static final String    HEADER_CONTENT_TRANSFER_ENCODING = "Content-Transfer-Encoding";
+    private static final String    CONTENT_TYPE_MULTIPART           = "multipart/form-data; charset=%s; boundary=%s";
+    private static final String    BINARY                           = "binary";
+    private static final String    CRLF                             = "\r\n";
+    private static final String    FORM_DATA                        = "form-data; name=\"%s\"";
+    private static final String    BOUNDARY_PREFIX                  = "--";
+    private static final String    CONTENT_TYPE_OCTET_STREAM        = "application/octet-stream";
+    private static final String    FILENAME                         = "filename=%s";
 
     private UrlRewriter            mUrlRewriter;
     private final SSLSocketFactory mSslSocketFactory;
@@ -94,7 +110,11 @@ public class HurlStack implements HttpStack {
         for (String headerName : map.keySet()) {
             connection.addRequestProperty(headerName, map.get(headerName));
         }
-        setConnectionParametersForRequest(connection, request);
+        if (request instanceof MultiPartRequest) {
+            performMultipartRequest(connection, request);
+        } else {
+            setConnectionParametersForRequest(connection, request);
+        }
         // Initialize HttpResponse with data from the HttpURLConnection.
         ProtocolVersion protocolVersion = new ProtocolVersion("HTTP", 1, 1);
         int responseCode = connection.getResponseCode();
@@ -120,7 +140,106 @@ public class HurlStack implements HttpStack {
                 response.addHeader(h);
             }
         }
+        connection.disconnect();
         return response;
+    }
+    
+    /**
+     * Perform a multi part request on a connection
+     * 
+     * @param connection
+     *            The Connection to perform the multi part request
+     * @param request
+     * @param multipartParams
+     *            The params to add to the Multi Part request
+     * @param filesToUpload
+     *            The files to upload
+     * @throws ProtocolException
+     * 
+     * TODO: MultiPart request has not yet been tested. Check if this can be moved to {@link HurlStack#addBodyIfExists(HttpURLConnection, Request)} method
+     */
+    private static void performMultipartRequest(HttpURLConnection connection, Request<?> request) throws ProtocolException {
+
+        final String charset = ((MultiPartRequest<?>) request).getProtocolCharset();
+        connection.setDoOutput(true);
+        connection.setRequestMethod("POST");
+        final int curTime = (int) (System.currentTimeMillis() / 1000);
+        final String boundary = BOUNDARY_PREFIX + curTime;
+        connection.setRequestProperty(HEADER_CONTENT_TYPE,
+                                      String.format(CONTENT_TYPE_MULTIPART,
+                                                    charset, curTime));
+        connection.setChunkedStreamingMode(0);
+
+        Map<String, MultiPartParam> multipartParams = ((MultiPartRequest<?>) request).getMultipartParams();
+        Map<String, String> filesToUpload = ((MultiPartRequest<?>) request).getFilesToUpload();
+        PrintWriter writer = null;
+        try {
+            OutputStream out = connection.getOutputStream();
+            writer = new PrintWriter(new OutputStreamWriter(out, charset), true);
+
+            for (String key : multipartParams.keySet()) {
+                MultiPartParam param = multipartParams.get(key);
+                writer.append(boundary)
+                      .append(CRLF)
+                      .append(String.format(HEADER_CONTENT_DISPOSITION + ": "
+                                      + FORM_DATA, key))
+                      .append(CRLF)
+                      .append(String.format(HEADER_CONTENT_TYPE + ": ",
+                                            param.contentType)).append(CRLF)
+                      .append(CRLF).append(param.value).append(CRLF).flush();
+            }
+
+            for (String key : filesToUpload.keySet()) {
+
+                File file = new File(filesToUpload.get(key));
+                writer.append(boundary)
+                      .append(CRLF)
+                      .append(String.format(HEADER_CONTENT_DISPOSITION + ": "
+                                                    + FORM_DATA + "; "
+                                                    + FILENAME, key,
+                                            file.getName())).append(CRLF)
+                      .append(CONTENT_TYPE_OCTET_STREAM).append(CRLF)
+                      .append(HEADER_CONTENT_TRANSFER_ENCODING + ": " + BINARY)
+                      .append(CRLF).append(CRLF).flush();
+
+                BufferedInputStream input = null;
+                try {
+                    FileInputStream fis = new FileInputStream(file);
+                    input = new BufferedInputStream(fis);
+                    int bufferLength = 0;
+
+                    byte[] buffer = new byte[1024];
+                    while ((bufferLength = input.read(buffer)) > 0) {
+                        out.write(buffer, 0, bufferLength);
+                    }
+                    out.flush(); // Important! Output cannot be closed. Close of
+                                 // writer will close
+                                 // output as well.
+                } finally {
+                    if (input != null)
+                        try {
+                            input.close();
+                        } catch (IOException ex) {
+                            ex.printStackTrace();
+                        }
+                }
+                writer.append(CRLF).flush(); // CRLF is important! It indicates
+                                             // end of binary
+                                             // boundary.
+            }
+
+            // End of multipart/form-data.
+            writer.append(boundary + BOUNDARY_PREFIX).append(CRLF);
+            writer.close();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+
+        } finally {
+            if (writer != null) {
+                writer.close();
+            }
+        }
     }
 
     /**
