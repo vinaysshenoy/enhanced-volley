@@ -51,6 +51,7 @@ import org.apache.http.message.BasicStatusLine;
 import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
 import com.android.volley.Request.Method;
+import com.android.volley.VolleyLog;
 import com.android.volley.toolbox.MultiPartRequest.MultiPartParam;
 
 /**
@@ -58,8 +59,8 @@ import com.android.volley.toolbox.MultiPartRequest.MultiPartParam;
  */
 public class HurlStack implements HttpStack {
 
-    private static final String    HEADER_CONTENT_TYPE = "Content-Type";
-    private static final String    HEADER_USER_AGENT   = "User-Agent";
+    private static final String    HEADER_CONTENT_TYPE              = "Content-Type";
+    private static final String    HEADER_USER_AGENT                = "User-Agent";
     private static final String    HEADER_CONTENT_DISPOSITION       = "Content-Disposition";
     private static final String    HEADER_CONTENT_TRANSFER_ENCODING = "Content-Transfer-Encoding";
     private static final String    CONTENT_TYPE_MULTIPART           = "multipart/form-data; charset=%s; boundary=%s";
@@ -69,6 +70,8 @@ public class HurlStack implements HttpStack {
     private static final String    BOUNDARY_PREFIX                  = "--";
     private static final String    CONTENT_TYPE_OCTET_STREAM        = "application/octet-stream";
     private static final String    FILENAME                         = "filename=%s";
+    private static final String    COLON_SPACE                      = ": ";
+    private static final String    SEMICOLON_SPACE                  = "; ";
 
     private UrlRewriter            mUrlRewriter;
     private final SSLSocketFactory mSslSocketFactory;
@@ -77,12 +80,10 @@ public class HurlStack implements HttpStack {
     /**
      * @param urlRewriter
      *            Rewriter to use for request URLs
-     * @param userAgent
-     *            User Agent to use for Http requests
      */
     public HurlStack(UrlRewriter urlRewriter, String userAgent) {
 
-        this(urlRewriter, userAgent, null);
+        this(urlRewriter, null, userAgent);
     }
 
     /**
@@ -91,11 +92,30 @@ public class HurlStack implements HttpStack {
      * @param sslSocketFactory
      *            SSL factory to use for HTTPS connections
      */
-    public HurlStack(UrlRewriter urlRewriter, String userAgent, SSLSocketFactory sslSocketFactory) {
+    public HurlStack(UrlRewriter urlRewriter, SSLSocketFactory sslSocketFactory, String userAgent) {
 
         mUrlRewriter = urlRewriter;
         mSslSocketFactory = sslSocketFactory;
         mUserAgent = userAgent;
+    }
+
+    /**
+     * Add headers and user agent to an {@code }
+     * 
+     * @param connection
+     *            The {@linkplain HttpURLConnection} to add request headers to
+     * @param userAgent
+     *            The User Agent to identify on server
+     * @param additionalHeaders
+     *            The headers to add to the request
+     */
+    private static void addHeadersToConnection(HttpURLConnection connection, String userAgent, Map<String, String> additionalHeaders) {
+
+        connection.setRequestProperty(HEADER_USER_AGENT, userAgent);
+        for (String headerName : additionalHeaders.keySet()) {
+            connection.addRequestProperty(headerName,
+                                          additionalHeaders.get(headerName));
+        }
     }
 
     @Override
@@ -106,15 +126,16 @@ public class HurlStack implements HttpStack {
         map.putAll(additionalHeaders);
         URL parsedUrl = new URL(mUrlRewriter.rewriteUrl(request));
         HttpURLConnection connection = openConnection(parsedUrl, request);
-        connection.setRequestProperty(HEADER_USER_AGENT, mUserAgent);
-        for (String headerName : map.keySet()) {
-            connection.addRequestProperty(headerName, map.get(headerName));
-        }
+
         if (request instanceof MultiPartRequest) {
-            performMultipartRequest(connection, request);
+            setConnectionParametersForMultipartRequest(connection, request,
+                                                       map, mUserAgent);
         } else {
-            setConnectionParametersForRequest(connection, request);
+
+            setConnectionParametersForRequest(connection, request, map,
+                                              mUserAgent);
         }
+
         // Initialize HttpResponse with data from the HttpURLConnection.
         ProtocolVersion protocolVersion = new ProtocolVersion("HTTP", 1, 1);
         int responseCode = connection.getResponseCode();
@@ -140,31 +161,29 @@ public class HurlStack implements HttpStack {
                 response.addHeader(h);
             }
         }
-        connection.disconnect();
         return response;
     }
-    
+
     /**
-     * Perform a multi part request on a connection
+     * Perform a multipart request on a connection
      * 
      * @param connection
      *            The Connection to perform the multi part request
      * @param request
+     * @param additionalHeaders
      * @param multipartParams
      *            The params to add to the Multi Part request
      * @param filesToUpload
      *            The files to upload
      * @throws ProtocolException
-     * 
-     * TODO: MultiPart request has not yet been tested. Check if this can be moved to {@link HurlStack#addBodyIfExists(HttpURLConnection, Request)} method
      */
-    private static void performMultipartRequest(HttpURLConnection connection, Request<?> request) throws ProtocolException {
+    private static void setConnectionParametersForMultipartRequest(HttpURLConnection connection, Request<?> request, HashMap<String, String> additionalHeaders, String userAgent) throws ProtocolException {
 
         final String charset = ((MultiPartRequest<?>) request).getProtocolCharset();
-        connection.setDoOutput(true);
-        connection.setRequestMethod("POST");
         final int curTime = (int) (System.currentTimeMillis() / 1000);
         final String boundary = BOUNDARY_PREFIX + curTime;
+        connection.setRequestMethod("POST");
+        connection.setDoOutput(true);
         connection.setRequestProperty(HEADER_CONTENT_TYPE,
                                       String.format(CONTENT_TYPE_MULTIPART,
                                                     charset, curTime));
@@ -174,33 +193,41 @@ public class HurlStack implements HttpStack {
         Map<String, String> filesToUpload = ((MultiPartRequest<?>) request).getFilesToUpload();
         PrintWriter writer = null;
         try {
+            addHeadersToConnection(connection, userAgent, additionalHeaders);
             OutputStream out = connection.getOutputStream();
             writer = new PrintWriter(new OutputStreamWriter(out, charset), true);
 
             for (String key : multipartParams.keySet()) {
                 MultiPartParam param = multipartParams.get(key);
+
                 writer.append(boundary)
                       .append(CRLF)
-                      .append(String.format(HEADER_CONTENT_DISPOSITION + ": "
-                                      + FORM_DATA, key))
+                      .append(String.format(HEADER_CONTENT_DISPOSITION
+                                      + COLON_SPACE + FORM_DATA, key))
                       .append(CRLF)
-                      .append(String.format(HEADER_CONTENT_TYPE + ": ",
-                                            param.contentType)).append(CRLF)
+                      .append(HEADER_CONTENT_TYPE + COLON_SPACE
+                                      + param.contentType).append(CRLF)
                       .append(CRLF).append(param.value).append(CRLF).flush();
             }
 
             for (String key : filesToUpload.keySet()) {
 
                 File file = new File(filesToUpload.get(key));
+
                 writer.append(boundary)
                       .append(CRLF)
-                      .append(String.format(HEADER_CONTENT_DISPOSITION + ": "
-                                                    + FORM_DATA + "; "
+                      .append(String.format(HEADER_CONTENT_DISPOSITION
+                                                    + COLON_SPACE + FORM_DATA
+                                                    + SEMICOLON_SPACE
                                                     + FILENAME, key,
-                                            file.getName())).append(CRLF)
-                      .append(CONTENT_TYPE_OCTET_STREAM).append(CRLF)
-                      .append(HEADER_CONTENT_TRANSFER_ENCODING + ": " + BINARY)
-                      .append(CRLF).append(CRLF).flush();
+                                            file.getName()))
+                      .append(CRLF)
+                      .append(HEADER_CONTENT_TYPE + COLON_SPACE
+                                      + CONTENT_TYPE_OCTET_STREAM)
+                      .append(CRLF)
+                      .append(HEADER_CONTENT_TRANSFER_ENCODING + COLON_SPACE
+                                      + BINARY).append(CRLF).append(CRLF)
+                      .flush();
 
                 BufferedInputStream input = null;
                 try {
@@ -229,8 +256,7 @@ public class HurlStack implements HttpStack {
             }
 
             // End of multipart/form-data.
-            writer.append(boundary + BOUNDARY_PREFIX).append(CRLF);
-            writer.close();
+            writer.append(boundary + BOUNDARY_PREFIX).append(CRLF).flush();
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -286,7 +312,11 @@ public class HurlStack implements HttpStack {
 
         int timeoutMs = request.getTimeoutMs();
         connection.setConnectTimeout(timeoutMs);
-        connection.setReadTimeout(timeoutMs);
+        // If request is a MultiPart request, set Read timeout to zero,
+        // otherwise the timeout will
+        // throw the SocketException before the files can get uploaded
+        connection.setReadTimeout((request instanceof MultiPartRequest<?>) ? 0
+                : timeoutMs);
         connection.setUseCaches(false);
         connection.setDoInput(true);
 
@@ -298,9 +328,9 @@ public class HurlStack implements HttpStack {
         return connection;
     }
 
-    @SuppressWarnings("deprecation")
-    /* package */static void setConnectionParametersForRequest(HttpURLConnection connection, Request<?> request) throws IOException, AuthFailureError {
+    static void setConnectionParametersForRequest(HttpURLConnection connection, Request<?> request, HashMap<String, String> additionalHeaders, String userAgent) throws IOException, AuthFailureError {
 
+        addHeadersToConnection(connection, userAgent, additionalHeaders);
         switch (request.getMethod()) {
             case Method.GET:
                 // Not necessary to set the request method because connection
