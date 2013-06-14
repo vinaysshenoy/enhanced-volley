@@ -251,7 +251,7 @@ public class DiskBasedCache implements Cache {
         if ((mTotalSize + neededSpace) < mMaxCacheSizeInBytes) {
             return;
         }
-        if (VolleyLog.DEBUG) {
+        if (VolleyLog.sDebug) {
             VolleyLog.v("Pruning old cache entries.");
         }
 
@@ -278,7 +278,7 @@ public class DiskBasedCache implements Cache {
             }
         }
 
-        if (VolleyLog.DEBUG) {
+        if (VolleyLog.sDebug) {
             VolleyLog.v("pruned %d files, %d bytes, %d ms",
                     prunedFiles, (mTotalSize - before), SystemClock.elapsedRealtime() - startTime);
         }

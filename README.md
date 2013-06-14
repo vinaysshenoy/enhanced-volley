@@ -30,8 +30,8 @@ aims to add those features to the Volley toolkit to make it a more complete HTTP
 2. Support for custom URL parameters(GET requests only)
 3. Default BitmapLruCache implementation added to ImageLoader
 4. AnimateImageView which will automatically perform any animations you require.
+5. Multipart Requests(Partially done for HUrlStack, not tested yet)
 
 ## Planned features
-1. Multipart Requests
-2. A generic OAuth Client implementation
-3. A WebSocket & Socket.IO client implementation based on the one found here - https://github.com/koush/android-websockets
+1. A generic OAuth Client implementation
+2. A WebSocket & Socket.IO client implementation based on the one found here - https://github.com/koush/android-websockets

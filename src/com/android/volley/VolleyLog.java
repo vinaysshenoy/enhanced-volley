@@ -29,10 +29,10 @@ import java.util.Locale;
 public class VolleyLog {
     public static String TAG = "Volley";
 
-    public static final boolean DEBUG = Log.isLoggable(TAG, Log.VERBOSE);
+    public static boolean sDebug = false;
 
     public static void v(String format, Object... args) {
-        if (DEBUG) {
+        if (sDebug) {
             Log.v(TAG, buildMessage(format, args));
         }
     }
@@ -87,7 +87,7 @@ public class VolleyLog {
      * A simple event log with records containing a name, thread ID, and timestamp.
      */
     static class MarkerLog {
-        public static final boolean ENABLED = VolleyLog.DEBUG;
+        public static final boolean ENABLED = VolleyLog.sDebug;
 
         /** Minimum duration from first marker to last in an marker log to warrant logging. */
         private static final long MIN_DURATION_FOR_LOGGING_MS = 0;

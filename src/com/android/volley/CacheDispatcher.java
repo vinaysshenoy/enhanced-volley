@@ -32,8 +32,6 @@ import java.util.concurrent.BlockingQueue;
 @SuppressWarnings("rawtypes")
 public class CacheDispatcher extends Thread {
 
-    private static final boolean DEBUG = VolleyLog.DEBUG;
-
     /** The queue of requests coming in for triage. */
     private final BlockingQueue<Request> mCacheQueue;
 
@@ -78,7 +76,7 @@ public class CacheDispatcher extends Thread {
 
     @Override
     public void run() {
-        if (DEBUG) VolleyLog.v("start new dispatcher");
+        if (VolleyLog.sDebug) VolleyLog.v("start new dispatcher");
         Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
 
         // Make a blocking call to initialize the cache.

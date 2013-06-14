@@ -242,7 +242,7 @@ public class RequestQueue {
                 }
                 stagedRequests.add(request);
                 mWaitingRequests.put(cacheKey, stagedRequests);
-                if (VolleyLog.DEBUG) {
+                if (VolleyLog.sDebug) {
                     VolleyLog.v("Request for cacheKey=%s is in flight, putting on hold.", cacheKey);
                 }
             } else {
@@ -273,7 +273,7 @@ public class RequestQueue {
                 String cacheKey = request.getCacheKey();
                 Queue<Request> waitingRequests = mWaitingRequests.remove(cacheKey);
                 if (waitingRequests != null) {
-                    if (VolleyLog.DEBUG) {
+                    if (VolleyLog.sDebug) {
                         VolleyLog.v("Releasing %d waiting requests for cacheKey=%s.",
                                 waitingRequests.size(), cacheKey);
                     }

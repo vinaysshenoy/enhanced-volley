@@ -42,8 +42,7 @@ import java.util.Map;
  * A network performing Volley requests over an {@link HttpStack}.
  */
 public class BasicNetwork implements Network {
-    protected static final boolean DEBUG = VolleyLog.DEBUG;
-
+    
     private static int SLOW_REQUEST_THRESHOLD_MS = 3000;
 
     private static int DEFAULT_POOL_SIZE = 4096;
@@ -141,7 +140,7 @@ public class BasicNetwork implements Network {
      */
     private void logSlowRequests(long requestLifetime, Request<?> request,
             byte[] responseContents, StatusLine statusLine) {
-        if (DEBUG || requestLifetime > SLOW_REQUEST_THRESHOLD_MS) {
+        if (VolleyLog.sDebug || requestLifetime > SLOW_REQUEST_THRESHOLD_MS) {
             VolleyLog.d("HTTP response for request=<%s> [lifetime=%d], [size=%s], " +
                     "[rc=%d], [retryCount=%s]", request, requestLifetime,
                     responseContents != null ? responseContents.length : "null",

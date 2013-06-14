@@ -28,6 +28,7 @@ import com.android.volley.AuthFailureError;
 import com.android.volley.Network;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
+import com.android.volley.VolleyLog;
 
 import java.io.File;
 import java.io.IOException;
@@ -62,7 +63,7 @@ public class Volley {
 
         if (stack == null) {
             if (Build.VERSION.SDK_INT >= 9) {
-                stack = new HurlStack(new BasicUrlRewriter());
+                stack = new HurlStack(new BasicUrlRewriter(), userAgent);
             } else {
                 // Prior to Gingerbread, HttpUrlConnection was unreliable.
                 // See:
@@ -77,6 +78,14 @@ public class Volley {
         queue.start();
 
         return queue;
+    }
+    
+    /**
+     * Set Logs to enabled or disabled
+     * @param isLoggable <code>true</code> to enable Logs, <code>false</code> to disable logs
+     */
+    public static void setLoggable(boolean isLoggable) {
+        VolleyLog.sDebug = isLoggable;
     }
     
     /**
@@ -100,8 +109,7 @@ public class Volley {
 
             switch (request.getMethod()) {
 
-            case Request.Method.GET:
-            case Request.Method.DELETE: {
+            case Request.Method.GET: {
 
                 String url = request.getUrl();
 
@@ -122,7 +130,8 @@ public class Volley {
             }
 
             case Request.Method.POST:
-            case Request.Method.PUT: {
+            case Request.Method.PUT:
+            case Request.Method.DELETE: {
                 return request.getUrl();
             }
 
