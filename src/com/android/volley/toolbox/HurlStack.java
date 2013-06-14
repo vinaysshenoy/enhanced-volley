@@ -51,7 +51,6 @@ import org.apache.http.message.BasicStatusLine;
 import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
 import com.android.volley.Request.Method;
-import com.android.volley.VolleyLog;
 import com.android.volley.toolbox.MultiPartRequest.MultiPartParam;
 
 /**
@@ -92,7 +91,8 @@ public class HurlStack implements HttpStack {
      * @param sslSocketFactory
      *            SSL factory to use for HTTPS connections
      */
-    public HurlStack(UrlRewriter urlRewriter, SSLSocketFactory sslSocketFactory, String userAgent) {
+    public HurlStack(UrlRewriter urlRewriter,
+            SSLSocketFactory sslSocketFactory, String userAgent) {
 
         mUrlRewriter = urlRewriter;
         mSslSocketFactory = sslSocketFactory;
@@ -114,7 +114,7 @@ public class HurlStack implements HttpStack {
         connection.setRequestProperty(HEADER_USER_AGENT, userAgent);
         for (String headerName : additionalHeaders.keySet()) {
             connection.addRequestProperty(headerName,
-                                          additionalHeaders.get(headerName));
+                    additionalHeaders.get(headerName));
         }
     }
 
@@ -129,11 +129,11 @@ public class HurlStack implements HttpStack {
 
         if (request instanceof MultiPartRequest) {
             setConnectionParametersForMultipartRequest(connection, request,
-                                                       map, mUserAgent);
+                    map, mUserAgent);
         } else {
 
             setConnectionParametersForRequest(connection, request, map,
-                                              mUserAgent);
+                    mUserAgent);
         }
 
         // Initialize HttpResponse with data from the HttpURLConnection.
@@ -145,19 +145,19 @@ public class HurlStack implements HttpStack {
             // Signal to the caller that something was wrong with the
             // connection.
             throw new IOException(
-                                  "Could not retrieve response code from HttpUrlConnection.");
+                    "Could not retrieve response code from HttpUrlConnection.");
         }
-        StatusLine responseStatus = new BasicStatusLine(
-                                                        protocolVersion,
-                                                        connection.getResponseCode(),
-                                                        connection.getResponseMessage());
+        StatusLine responseStatus = new BasicStatusLine(protocolVersion,
+                connection.getResponseCode(), connection.getResponseMessage());
         BasicHttpResponse response = new BasicHttpResponse(responseStatus);
         response.setEntity(entityFromConnection(connection));
-        for (Entry<String, List<String>> header : connection.getHeaderFields()
-                                                            .entrySet()) {
+        for (Entry<String, List<String>> header : connection
+                .getHeaderFields()
+                .entrySet()) {
             if (header.getKey() != null) {
-                Header h = new BasicHeader(header.getKey(), header.getValue()
-                                                                  .get(0));
+                Header h = new BasicHeader(header.getKey(), header
+                        .getValue()
+                        .get(0));
                 response.addHeader(h);
             }
         }
@@ -179,18 +179,20 @@ public class HurlStack implements HttpStack {
      */
     private static void setConnectionParametersForMultipartRequest(HttpURLConnection connection, Request<?> request, HashMap<String, String> additionalHeaders, String userAgent) throws ProtocolException {
 
-        final String charset = ((MultiPartRequest<?>) request).getProtocolCharset();
+        final String charset = ((MultiPartRequest<?>) request)
+                .getProtocolCharset();
         final int curTime = (int) (System.currentTimeMillis() / 1000);
         final String boundary = BOUNDARY_PREFIX + curTime;
         connection.setRequestMethod("POST");
         connection.setDoOutput(true);
         connection.setRequestProperty(HEADER_CONTENT_TYPE,
-                                      String.format(CONTENT_TYPE_MULTIPART,
-                                                    charset, curTime));
+                String.format(CONTENT_TYPE_MULTIPART, charset, curTime));
         connection.setChunkedStreamingMode(0);
 
-        Map<String, MultiPartParam> multipartParams = ((MultiPartRequest<?>) request).getMultipartParams();
-        Map<String, String> filesToUpload = ((MultiPartRequest<?>) request).getFilesToUpload();
+        Map<String, MultiPartParam> multipartParams = ((MultiPartRequest<?>) request)
+                .getMultipartParams();
+        Map<String, String> filesToUpload = ((MultiPartRequest<?>) request)
+                .getFilesToUpload();
         PrintWriter writer = null;
         try {
             addHeadersToConnection(connection, userAgent, additionalHeaders);
@@ -201,13 +203,17 @@ public class HurlStack implements HttpStack {
                 MultiPartParam param = multipartParams.get(key);
 
                 writer.append(boundary)
-                      .append(CRLF)
-                      .append(String.format(HEADER_CONTENT_DISPOSITION
-                                      + COLON_SPACE + FORM_DATA, key))
-                      .append(CRLF)
-                      .append(HEADER_CONTENT_TYPE + COLON_SPACE
-                                      + param.contentType).append(CRLF)
-                      .append(CRLF).append(param.value).append(CRLF).flush();
+                        .append(CRLF)
+                        .append(String.format(HEADER_CONTENT_DISPOSITION
+                                + COLON_SPACE + FORM_DATA, key))
+                        .append(CRLF)
+                        .append(HEADER_CONTENT_TYPE + COLON_SPACE
+                                + param.contentType)
+                        .append(CRLF)
+                        .append(CRLF)
+                        .append(param.value)
+                        .append(CRLF)
+                        .flush();
             }
 
             for (String key : filesToUpload.keySet()) {
@@ -215,19 +221,19 @@ public class HurlStack implements HttpStack {
                 File file = new File(filesToUpload.get(key));
 
                 writer.append(boundary)
-                      .append(CRLF)
-                      .append(String.format(HEADER_CONTENT_DISPOSITION
-                                                    + COLON_SPACE + FORM_DATA
-                                                    + SEMICOLON_SPACE
-                                                    + FILENAME, key,
-                                            file.getName()))
-                      .append(CRLF)
-                      .append(HEADER_CONTENT_TYPE + COLON_SPACE
-                                      + CONTENT_TYPE_OCTET_STREAM)
-                      .append(CRLF)
-                      .append(HEADER_CONTENT_TRANSFER_ENCODING + COLON_SPACE
-                                      + BINARY).append(CRLF).append(CRLF)
-                      .flush();
+                        .append(CRLF)
+                        .append(String.format(HEADER_CONTENT_DISPOSITION
+                                + COLON_SPACE + FORM_DATA + SEMICOLON_SPACE
+                                + FILENAME, key, file.getName()))
+                        .append(CRLF)
+                        .append(HEADER_CONTENT_TYPE + COLON_SPACE
+                                + CONTENT_TYPE_OCTET_STREAM)
+                        .append(CRLF)
+                        .append(HEADER_CONTENT_TRANSFER_ENCODING + COLON_SPACE
+                                + BINARY)
+                        .append(CRLF)
+                        .append(CRLF)
+                        .flush();
 
                 BufferedInputStream input = null;
                 try {
@@ -322,7 +328,8 @@ public class HurlStack implements HttpStack {
 
         // use caller-provided custom SslSocketFactory, if any, for HTTPS
         if ("https".equals(url.getProtocol()) && mSslSocketFactory != null) {
-            ((HttpsURLConnection) connection).setSSLSocketFactory(mSslSocketFactory);
+            ((HttpsURLConnection) connection)
+                    .setSSLSocketFactory(mSslSocketFactory);
         }
 
         return connection;
@@ -332,25 +339,25 @@ public class HurlStack implements HttpStack {
 
         addHeadersToConnection(connection, userAgent, additionalHeaders);
         switch (request.getMethod()) {
-            case Method.GET:
-                // Not necessary to set the request method because connection
-                // defaults to GET but
-                // being explicit here.
-                connection.setRequestMethod("GET");
-                break;
-            case Method.DELETE:
-                connection.setRequestMethod("DELETE");
-                break;
-            case Method.POST:
-                connection.setRequestMethod("POST");
-                addBodyIfExists(connection, request);
-                break;
-            case Method.PUT:
-                connection.setRequestMethod("PUT");
-                addBodyIfExists(connection, request);
-                break;
-            default:
-                throw new IllegalStateException("Unknown method type.");
+        case Method.GET:
+            // Not necessary to set the request method because connection
+            // defaults to GET but
+            // being explicit here.
+            connection.setRequestMethod("GET");
+            break;
+        case Method.DELETE:
+            connection.setRequestMethod("DELETE");
+            break;
+        case Method.POST:
+            connection.setRequestMethod("POST");
+            addBodyIfExists(connection, request);
+            break;
+        case Method.PUT:
+            connection.setRequestMethod("PUT");
+            addBodyIfExists(connection, request);
+            break;
+        default:
+            throw new IllegalStateException("Unknown method type.");
         }
     }
 
@@ -360,9 +367,9 @@ public class HurlStack implements HttpStack {
         if (body != null) {
             connection.setDoOutput(true);
             connection.addRequestProperty(HEADER_CONTENT_TYPE,
-                                          request.getBodyContentType());
+                    request.getBodyContentType());
             DataOutputStream out = new DataOutputStream(
-                                                        connection.getOutputStream());
+                    connection.getOutputStream());
             out.write(body);
             out.close();
         }
