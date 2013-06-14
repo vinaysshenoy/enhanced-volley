@@ -21,6 +21,7 @@ import android.content.Context;
 import android.content.res.TypedArray;
 import android.text.TextUtils;
 import android.util.AttributeSet;
+import android.view.ViewGroup.LayoutParams;
 
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.ImageLoader.ImageContainer;
@@ -34,20 +35,21 @@ import com.vinaysshenoy.volleyenhanced.R;
 public class NetworkImageView extends AnimateImageView {
 
     /** The URL of the network image to load */
-    private String mUrl;
+    private String         mUrl;
 
     /**
-     * Resource ID of the image to be used as a placeholder until the network image is loaded.
+     * Resource ID of the image to be used as a placeholder until the network
+     * image is loaded.
      */
-    private int mDefaultImageId;
+    private int            mDefaultImageId;
 
     /**
      * Resource ID of the image to be used if the network response fails.
      */
-    private int mErrorImageId;
+    private int            mErrorImageId;
 
     /** Local copy of the ImageLoader. */
-    private ImageLoader mImageLoader;
+    private ImageLoader    mImageLoader;
 
     /** Current ImageContainer. (either in-flight or finished) */
     private ImageContainer mImageContainer;
@@ -69,18 +71,21 @@ public class NetworkImageView extends AnimateImageView {
 
     private void init(Context context, AttributeSet attrs) {
 
-        if(attrs == null) {
+        if (attrs == null) {
             initializeWithDefaults();
         } else {
-            TypedArray attributes = context.obtainStyledAttributes(attrs, R.styleable.NetworkImageView);
+            TypedArray attributes = context.obtainStyledAttributes(attrs,
+                    R.styleable.NetworkImageView);
 
-            if(attributes == null) {
+            if (attributes == null) {
                 initializeWithDefaults();
             }
 
             else {
-                mDefaultImageId = attributes.getResourceId(R.styleable.NetworkImageView_default_image, 0);
-                mErrorImageId = attributes.getResourceId(R.styleable.NetworkImageView_error_image, 0);
+                mDefaultImageId = attributes.getResourceId(
+                        R.styleable.NetworkImageView_default_image, 0);
+                mErrorImageId = attributes.getResourceId(
+                        R.styleable.NetworkImageView_error_image, 0);
                 attributes.recycle();
 
             }
@@ -94,16 +99,19 @@ public class NetworkImageView extends AnimateImageView {
     }
 
     /**
-     * Sets URL of the image that should be loaded into this view. Note that calling this will
-     * immediately either set the cached image (if available) or the default image specified by
+     * Sets URL of the image that should be loaded into this view. Note that
+     * calling this will immediately either set the cached image (if available)
+     * or the default image specified by
      * {@link NetworkImageView#setDefaultImageResId(int)} on the view.
-     *
-     * NOTE: If applicable, {@link NetworkImageView#setDefaultImageResId(int)} and
-     * {@link NetworkImageView#setErrorImageResId(int)} should be called prior to calling
-     * this function.
-     *
-     * @param url The URL that should be loaded into this ImageView.
-     * @param imageLoader ImageLoader that will be used to make the request.
+     * 
+     * NOTE: If applicable, {@link NetworkImageView#setDefaultImageResId(int)}
+     * and {@link NetworkImageView#setErrorImageResId(int)} should be called
+     * prior to calling this function.
+     * 
+     * @param url
+     *            The URL that should be loaded into this ImageView.
+     * @param imageLoader
+     *            ImageLoader that will be used to make the request.
      */
     public void setImageUrl(String url, ImageLoader imageLoader) {
         mUrl = url;
@@ -112,19 +120,17 @@ public class NetworkImageView extends AnimateImageView {
         loadImageIfNecessary(false);
     }
 
-
-
     /**
-     * Sets the default image resource ID to be used for this view until the attempt to load it
-     * completes.
+     * Sets the default image resource ID to be used for this view until the
+     * attempt to load it completes.
      */
     public void setDefaultImageResId(int defaultImage) {
         mDefaultImageId = defaultImage;
     }
 
     /**
-     * Sets the error image resource ID to be used for this view in the event that the image
-     * requested fails to load.
+     * Sets the error image resource ID to be used for this view in the event
+     * that the image requested fails to load.
      */
     public void setErrorImageResId(int errorImage) {
         mErrorImageId = errorImage;
@@ -132,18 +138,25 @@ public class NetworkImageView extends AnimateImageView {
 
     /**
      * Loads the image for the view if it isn't already loaded.
-     * @param isInLayoutPass True if this was invoked from a layout pass, false otherwise.
+     * 
+     * @param isInLayoutPass
+     *            True if this was invoked from a layout pass, false otherwise.
      */
     private void loadImageIfNecessary(final boolean isInLayoutPass) {
         int width = getWidth();
         int height = getHeight();
 
-        // if the view's bounds aren't known yet, hold off on loading the image.
-        if (width == 0 && height == 0) {
+        boolean isFullyWrapContent = getLayoutParams().height == LayoutParams.WRAP_CONTENT
+                && getLayoutParams().width == LayoutParams.WRAP_CONTENT;
+        // if the view's bounds aren't known yet, and this is not a
+        // wrap-content/wrap-content
+        // view, hold off on loading the image.
+        if (width == 0 && height == 0 && !isFullyWrapContent) {
             return;
         }
 
-        // if the URL to be loaded in this view is empty, cancel any old requests and clear the
+        // if the URL to be loaded in this view is empty, cancel any old
+        // requests and clear the
         // currently loaded image.
         if (TextUtils.isEmpty(mUrl)) {
             if (mImageContainer != null) {
@@ -154,19 +167,22 @@ public class NetworkImageView extends AnimateImageView {
             return;
         }
 
-        // if there was an old request in this view, check if it needs to be canceled.
+        // if there was an old request in this view, check if it needs to be
+        // canceled.
         if (mImageContainer != null && mImageContainer.getRequestUrl() != null) {
             if (mImageContainer.getRequestUrl().equals(mUrl)) {
                 // if the request is from the same URL, return.
                 return;
             } else {
-                // if there is a pre-existing request, cancel it if it's fetching a different URL.
+                // if there is a pre-existing request, cancel it if it's
+                // fetching a different URL.
                 mImageContainer.cancelRequest();
                 setImageBitmap(null);
             }
         }
 
-        // The pre-existing content of this view didn't match the current URL. Load the new image
+        // The pre-existing content of this view didn't match the current URL.
+        // Load the new image
         // from the network.
         ImageContainer newContainer = mImageLoader.get(mUrl,
                 new ImageListener() {
@@ -179,9 +195,12 @@ public class NetworkImageView extends AnimateImageView {
 
                     @Override
                     public void onResponse(final ImageContainer response, boolean isImmediate) {
-                        // If this was an immediate response that was delivered inside of a layout
-                        // pass do not set the image immediately as it will trigger a requestLayout
-                        // inside of a layout. Instead, defer setting the image by posting back to
+                        // If this was an immediate response that was delivered
+                        // inside of a layout
+                        // pass do not set the image immediately as it will
+                        // trigger a requestLayout
+                        // inside of a layout. Instead, defer setting the image
+                        // by posting back to
                         // the main thread.
                         if (isImmediate && isInLayoutPass) {
                             post(new Runnable() {
@@ -218,7 +237,8 @@ public class NetworkImageView extends AnimateImageView {
             // out the image from the view.
             mImageContainer.cancelRequest();
             setImageBitmap(null);
-            // also clear out the container so we can reload the image if necessary.
+            // also clear out the container so we can reload the image if
+            // necessary.
             mImageContainer = null;
         }
         super.onDetachedFromWindow();
@@ -229,7 +249,5 @@ public class NetworkImageView extends AnimateImageView {
         super.drawableStateChanged();
         invalidate();
     }
-
-
 
 }
