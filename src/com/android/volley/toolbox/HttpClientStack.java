@@ -139,7 +139,7 @@ public class HttpClientStack implements HttpStack {
                 }
                 
                 if(file.isDirectory()) {
-                    throw new IOException(String.format("File is a directory:", file.getAbsolutePath()));
+                    throw new IOException(String.format("File is a directory: %s", file.getAbsolutePath()));
                 }
                 
                 multipartEntity.addPart(new FilePart(key, file, null, null));

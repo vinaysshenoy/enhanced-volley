@@ -225,7 +225,7 @@ public class HurlStack implements HttpStack {
                 }
                 
                 if(file.isDirectory()) {
-                    throw new IOException(String.format("File is a directory:", file.getAbsolutePath()));
+                    throw new IOException(String.format("File is a directory: %s", file.getAbsolutePath()));
                 }
 
                 writer.append(boundary)
