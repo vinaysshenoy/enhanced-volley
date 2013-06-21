@@ -213,7 +213,7 @@ public class NetworkImageView extends AnimateImageView {
                         }
 
                         if (response.getBitmap() != null) {
-                            setImageBitmap(response.getBitmap());
+                            setImageBitmap(response.getBitmap(), !isImmediate);
                         } else if (mDefaultImageId != 0) {
                             setImageResource(mDefaultImageId);
                         }
