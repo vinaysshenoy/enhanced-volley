@@ -118,7 +118,7 @@ public class HttpClientStack implements HttpStack {
         }
     }
 
-    private static void setEntityIfNonEmptyBody(HttpEntityEnclosingRequestBase httpRequest, Request<?> request) throws AuthFailureError {
+    private static void setEntityIfNonEmptyBody(HttpEntityEnclosingRequestBase httpRequest, Request<?> request) throws IOException, AuthFailureError {
 
         if (request instanceof MultiPartRequest) {
 
@@ -133,6 +133,15 @@ public class HttpClientStack implements HttpStack {
 
             for (String key : filesToUpload.keySet()) {
                 File file = new File(filesToUpload.get(key));
+                
+                if(!file.exists()) {
+                    throw new IOException(String.format("File not found: %s", file.getAbsolutePath()));
+                }
+                
+                if(file.isDirectory()) {
+                    throw new IOException(String.format("File is a directory:", file.getAbsolutePath()));
+                }
+                
                 multipartEntity.addPart(new FilePart(key, file, null, null));
             }
             httpRequest.setEntity(multipartEntity);

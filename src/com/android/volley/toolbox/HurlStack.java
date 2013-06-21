@@ -177,7 +177,7 @@ public class HurlStack implements HttpStack {
      *            The files to upload
      * @throws ProtocolException
      */
-    private static void setConnectionParametersForMultipartRequest(HttpURLConnection connection, Request<?> request, HashMap<String, String> additionalHeaders, String userAgent) throws ProtocolException {
+    private static void setConnectionParametersForMultipartRequest(HttpURLConnection connection, Request<?> request, HashMap<String, String> additionalHeaders, String userAgent) throws IOException, ProtocolException {
 
         final String charset = ((MultiPartRequest<?>) request)
                 .getProtocolCharset();
@@ -219,6 +219,14 @@ public class HurlStack implements HttpStack {
             for (String key : filesToUpload.keySet()) {
 
                 File file = new File(filesToUpload.get(key));
+                
+                if(!file.exists()) {
+                    throw new IOException(String.format("File not found: %s", file.getAbsolutePath()));
+                }
+                
+                if(file.isDirectory()) {
+                    throw new IOException(String.format("File is a directory:", file.getAbsolutePath()));
+                }
 
                 writer.append(boundary)
                         .append(CRLF)
@@ -335,7 +343,7 @@ public class HurlStack implements HttpStack {
         return connection;
     }
 
-    static void setConnectionParametersForRequest(HttpURLConnection connection, Request<?> request, HashMap<String, String> additionalHeaders, String userAgent) throws IOException, AuthFailureError {
+    private static void setConnectionParametersForRequest(HttpURLConnection connection, Request<?> request, HashMap<String, String> additionalHeaders, String userAgent) throws IOException, AuthFailureError {
 
         addHeadersToConnection(connection, userAgent, additionalHeaders);
         switch (request.getMethod()) {
