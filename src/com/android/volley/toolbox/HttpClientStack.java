@@ -18,9 +18,11 @@
 
 package com.android.volley.toolbox;
 
-import com.android.volley.AuthFailureError;
-import com.android.volley.Request;
-import com.android.volley.Request.Method;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -37,21 +39,23 @@ import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
 
-import java.io.IOException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import com.android.volley.AuthFailureError;
+import com.android.volley.Request;
+import com.android.volley.Request.Method;
+import com.android.volley.toolbox.MultiPartRequest.MultiPartParam;
+import com.android.volley.toolbox.multipart.FilePart;
+import com.android.volley.toolbox.multipart.MultipartEntity;
+import com.android.volley.toolbox.multipart.StringPart;
 
 /**
  * An HttpStack that performs request over an {@link HttpClient}.
  */
 public class HttpClientStack implements HttpStack {
-    protected final HttpClient mClient;
+    protected final HttpClient  mClient;
 
-    private final static String HEADER_CONTENT_TYPE = "Content-Type";
+    private final static String HEADER_CONTENT_TYPE       = "Content-Type";
 
-    private UrlRewriter mUrlRewriter;
+    private UrlRewriter         mUrlRewriter;
 
     public HttpClientStack(HttpClient client, UrlRewriter urlRewriter) {
         mClient = client;
@@ -74,8 +78,7 @@ public class HttpClientStack implements HttpStack {
     }
 
     @Override
-    public HttpResponse performRequest(Request<?> request, Map<String, String> additionalHeaders)
-            throws IOException, AuthFailureError {
+    public HttpResponse performRequest(Request<?> request, Map<String, String> additionalHeaders) throws IOException, AuthFailureError {
         HttpUriRequest httpRequest = createHttpRequest(request, additionalHeaders, mUrlRewriter);
         addHeaders(httpRequest, additionalHeaders);
         addHeaders(httpRequest, request.getHeaders());
@@ -92,44 +95,63 @@ public class HttpClientStack implements HttpStack {
     /**
      * Creates the appropriate subclass of HttpUriRequest for passed in request.
      */
-    @SuppressWarnings("deprecation")
-    /* protected */ static HttpUriRequest createHttpRequest(Request<?> request,
-            Map<String, String> additionalHeaders, UrlRewriter urlRewriter) throws AuthFailureError, IOException {
+    protected static HttpUriRequest createHttpRequest(Request<?> request, Map<String, String> additionalHeaders, UrlRewriter urlRewriter) throws AuthFailureError, IOException {
         switch (request.getMethod()) {
-            case Method.GET:
-                return new HttpGet(urlRewriter.rewriteUrl(request));
-            case Method.DELETE:
-                return new HttpDelete(urlRewriter.rewriteUrl(request));
-            case Method.POST: {
-                HttpPost postRequest = new HttpPost(urlRewriter.rewriteUrl(request));
-                postRequest.addHeader(HEADER_CONTENT_TYPE, request.getBodyContentType());
-                setEntityIfNonEmptyBody(postRequest, request);
-                return postRequest;
-            }
-            case Method.PUT: {
-                HttpPut putRequest = new HttpPut(urlRewriter.rewriteUrl(request));
-                putRequest.addHeader(HEADER_CONTENT_TYPE, request.getBodyContentType());
-                setEntityIfNonEmptyBody(putRequest, request);
-                return putRequest;
-            }
-            default:
-                throw new IllegalStateException("Unknown request method.");
+        case Method.GET:
+            return new HttpGet(urlRewriter.rewriteUrl(request));
+        case Method.DELETE:
+            return new HttpDelete(urlRewriter.rewriteUrl(request));
+        case Method.POST: {
+            HttpPost postRequest = new HttpPost(urlRewriter.rewriteUrl(request));
+            postRequest.addHeader(HEADER_CONTENT_TYPE, request.getBodyContentType());
+            setEntityIfNonEmptyBody(postRequest, request);
+            return postRequest;
+        }
+        case Method.PUT: {
+            HttpPut putRequest = new HttpPut(urlRewriter.rewriteUrl(request));
+            putRequest.addHeader(HEADER_CONTENT_TYPE, request.getBodyContentType());
+            setEntityIfNonEmptyBody(putRequest, request);
+            return putRequest;
+        }
+        default:
+            throw new IllegalStateException("Unknown request method.");
         }
     }
 
-    private static void setEntityIfNonEmptyBody(HttpEntityEnclosingRequestBase httpRequest,
-            Request<?> request) throws AuthFailureError {
-        byte[] body = request.getBody();
-        if (body != null) {
-            HttpEntity entity = new ByteArrayEntity(body);
-            httpRequest.setEntity(entity);
+    private static void setEntityIfNonEmptyBody(HttpEntityEnclosingRequestBase httpRequest, Request<?> request) throws AuthFailureError {
+
+        if (request instanceof MultiPartRequest) {
+
+            final Map<String, MultiPartParam> multipartParams = ((MultiPartRequest<?>) request).getMultipartParams();
+            final Map<String, String> filesToUpload = ((MultiPartRequest<?>) request).getFilesToUpload();
+
+            MultipartEntity multipartEntity = new MultipartEntity();
+
+            for (String key : multipartParams.keySet()) {
+                multipartEntity.addPart(new StringPart(key, multipartParams.get(key).value));
+            }
+
+            for (String key : filesToUpload.keySet()) {
+                File file = new File(filesToUpload.get(key));
+                multipartEntity.addPart(new FilePart(key, file, null, null));
+            }
+            httpRequest.setEntity(multipartEntity);
+
+        } else {
+            byte[] body = request.getBody();
+            if (body != null) {
+                HttpEntity entity = new ByteArrayEntity(body);
+                httpRequest.setEntity(entity);
+            }
         }
     }
 
     /**
      * Called before the request is executed using the underlying HttpClient.
-     *
-     * <p>Overwrite in subclasses to augment the request.</p>
+     * 
+     * <p>
+     * Overwrite in subclasses to augment the request.
+     * </p>
      */
     protected void onPrepareRequest(HttpUriRequest request) throws IOException {
         // Nothing.
