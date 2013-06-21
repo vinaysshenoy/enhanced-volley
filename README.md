@@ -30,7 +30,7 @@ aims to add those features to the Volley toolkit to make it a more complete HTTP
 2. Support for custom URL parameters(GET requests only)
 3. Default BitmapLruCache implementation added to ImageLoader
 4. AnimateImageView which will automatically perform any animations you require.
-5. Multipart Requests(Done. File uploads support only application/octet-stream MIME type as of now)
+5. Multipart Requests(File uploads support only application/octet-stream MIME type as of now)
 
 ## Planned features
 1. A generic OAuth Client implementation
