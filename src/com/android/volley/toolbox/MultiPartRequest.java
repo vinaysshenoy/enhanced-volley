@@ -4,6 +4,7 @@ package com.android.volley.toolbox;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.NetworkResponse;
 import com.android.volley.Request;
 import com.android.volley.Response;
@@ -34,13 +35,19 @@ public abstract class MultiPartRequest<T> extends Request<T> {
      * A map for uploading files
      */
     private Map<String, String>         mFileUploads     = null;
+    
+    /**
+     * Default connection timeout for Multipart requests
+     */
+    public static final int TIMEOUT_MS = 30000;
 
     public MultiPartRequest(int method, String url, Listener<T> listener, ErrorListener errorlistener) {
 
-        super(method, url, errorlistener);
+        super(method, url, errorlistener, new DefaultRetryPolicy(TIMEOUT_MS, DefaultRetryPolicy.DEFAULT_MAX_RETRIES, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
         mListener = listener;
         mMultipartParams = new HashMap<String, MultiPartRequest.MultiPartParam>();
         mFileUploads = new HashMap<String, String>();
+        
     }
 
     /**
@@ -134,5 +141,5 @@ public abstract class MultiPartRequest<T> extends Request<T> {
         
         return PROTOCOL_CHARSET;
     }
-
+    
 }

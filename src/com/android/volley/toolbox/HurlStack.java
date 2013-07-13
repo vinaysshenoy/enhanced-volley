@@ -326,11 +326,7 @@ public class HurlStack implements HttpStack {
 
         int timeoutMs = request.getTimeoutMs();
         connection.setConnectTimeout(timeoutMs);
-        // If request is a MultiPart request, set Read timeout to zero,
-        // otherwise the timeout will
-        // throw the SocketException before the files can get uploaded
-        connection.setReadTimeout((request instanceof MultiPartRequest<?>) ? 0
-                : timeoutMs);
+        connection.setReadTimeout(timeoutMs);
         connection.setUseCaches(false);
         connection.setDoInput(true);
 

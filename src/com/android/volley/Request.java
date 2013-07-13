@@ -120,10 +120,20 @@ public abstract class Request<T> implements Comparable<Request<T>> {
      * an already-parsed response.
      */
     public Request(int method, String url, Response.ErrorListener listener) {
+        this(method, url, listener, null);
+    }
+    
+    /**
+     * Creates a new request with the given method (one of the values from {@link Method}),
+     * URL, error listener and retry policy.  Note that the normal response listener is not provided here as
+     * delivery of responses is provided by subclasses, who have a better idea of how to deliver
+     * an already-parsed response.
+     */
+    public Request(int method, String url, Response.ErrorListener listener, RetryPolicy retryPolicy) {
         mMethod = method;
         mUrl = url;
         mErrorListener = listener;
-        setRetryPolicy(new DefaultRetryPolicy());
+        setRetryPolicy((retryPolicy == null) ? new DefaultRetryPolicy() : retryPolicy);
 
         mDefaultTrafficStatsTag = TextUtils.isEmpty(url) ? 0: Uri.parse(url).getHost().hashCode();
     }
