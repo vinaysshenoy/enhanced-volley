@@ -426,7 +426,12 @@ public abstract class Request<T> implements Comparable<Request<T>> {
      * Returns true if responses to this request should be cached.
      */
     public final boolean shouldCache() {
-        return mShouldCache;
+        
+        //Allow caching only if method is a GET request
+        if(mMethod == Method.GET) {
+            return mShouldCache & true;
+        }
+        return false;
     }
 
     /**
