@@ -50,6 +50,12 @@ public class DiskBasedCache implements Cache {
 
     /** The root directory to use for the cache. */
     private final File mRootDirectory;
+    
+    /** The directory within the root directory to store response headers. */
+    private final File mResponsesDirectory;
+    
+    /** The directory within the root directory to store response bodies. */
+    private final File mHeadersDirectory;
 
     /** The maximum size of the cache in bytes. */
     private final int mMaxCacheSizeInBytes;
@@ -62,6 +68,12 @@ public class DiskBasedCache implements Cache {
 
     /** Magic number for current version of cache file format. */
     private static final int CACHE_MAGIC = 0x20120504;
+    
+    /** Directory name to store responses */
+    private static final String RESPONSES = "responses";
+    
+    /** Directory name to store headers */
+    private static final String HEADERS = "headers";
 
     /**
      * Constructs an instance of the DiskBasedCache at the specified directory.
@@ -71,6 +83,9 @@ public class DiskBasedCache implements Cache {
     public DiskBasedCache(File rootDirectory, int maxCacheSizeInBytes) {
         mRootDirectory = rootDirectory;
         mMaxCacheSizeInBytes = maxCacheSizeInBytes;
+        
+        mResponsesDirectory = new File(rootDirectory, RESPONSES);
+        mHeadersDirectory = new File(rootDirectory, HEADERS);
     }
 
     /**
@@ -109,12 +124,16 @@ public class DiskBasedCache implements Cache {
             return null;
         }
 
-        File file = getFileForKey(key);
+        File file = getHeaderFileForKey(key);
         CountingInputStream cis = null;
+        FileInputStream fis = null;
         try {
             cis = new CountingInputStream(new FileInputStream(file));
             CacheHeader.readHeader(cis); // eat header
-            byte[] data = streamToBytes(cis, (int) (file.length() - cis.bytesRead));
+            
+            File responseFile = getResponseFileForKey(key);
+            fis = new FileInputStream(responseFile);
+            byte[] data = streamToBytes(fis, (int) (responseFile.length()));
             return entry.toCacheEntry(data);
         } catch (IOException e) {
             VolleyLog.d("%s: %s", file.getAbsolutePath(), e.toString());
@@ -128,23 +147,38 @@ public class DiskBasedCache implements Cache {
                     return null;
                 }
             }
+            
+            if(fis != null) {
+                try {
+                    fis.close();
+                } catch (IOException e) {
+                    return null;
+                }
+            }
         }
     }
 
     /**
      * Initializes the DiskBasedCache by scanning for all files currently in the
-     * specified root directory. Creates the root directory if necessary.
+     * specified root directory. Creates the directories if necessary.
      */
     @Override
     public synchronized void initialize() {
         if (!mRootDirectory.exists()) {
             if (!mRootDirectory.mkdirs()) {
                 VolleyLog.e("Unable to create cache dir %s", mRootDirectory.getAbsolutePath());
+            } else {
+                if(!mHeadersDirectory.mkdir()) {
+                    VolleyLog.e("Unable to create cache dir %s", mHeadersDirectory.getAbsolutePath());
+                }
+                if(!mResponsesDirectory.mkdir()) {
+                    VolleyLog.e("Unable to create cache dir %s", mResponsesDirectory.getAbsolutePath());
+                }
             }
             return;
         }
-
-        File[] files = mRootDirectory.listFiles();
+        
+        File[] files = mHeadersDirectory.listFiles();
         if (files == null) {
             return;
         }
@@ -154,6 +188,10 @@ public class DiskBasedCache implements Cache {
                 fis = new FileInputStream(file);
                 CacheHeader entry = CacheHeader.readHeader(fis);
                 entry.size = file.length();
+                
+                File responseFile = getResponseFileForKey(entry.key);
+                entry.size += responseFile.length();
+                
                 putEntry(entry.key, entry);
             } catch (IOException e) {
                 if (file != null) {
@@ -193,11 +231,14 @@ public class DiskBasedCache implements Cache {
     @Override
     public synchronized void put(String key, Entry entry) {
         pruneIfNeeded(entry.data.length);
-        File file = getFileForKey(key);
+        File file = getHeaderFileForKey(key);
         try {
             FileOutputStream fos = new FileOutputStream(file);
             CacheHeader e = new CacheHeader(key, entry);
             e.writeHeader(fos);
+            fos.close();
+            
+            fos = new FileOutputStream(getResponseFileForKey(key));
             fos.write(entry.data);
             fos.close();
             putEntry(key, e);
@@ -215,7 +256,8 @@ public class DiskBasedCache implements Cache {
      */
     @Override
     public synchronized void remove(String key) {
-        boolean deleted = getFileForKey(key).delete();
+        boolean deleted = getHeaderFileForKey(key).delete();
+        deleted &= getResponseFileForKey(key).delete();
         removeEntry(key);
         if (!deleted) {
             VolleyLog.d("Could not delete cache entry for key=%s, filename=%s",
@@ -236,10 +278,17 @@ public class DiskBasedCache implements Cache {
     }
 
     /**
-     * Returns a file object for the given cache key.
+     * Returns a header file object for the given cache key.
      */
-    public File getFileForKey(String key) {
-        return new File(mRootDirectory, getFilenameForKey(key));
+    public File getHeaderFileForKey(String key) {
+        return new File(mHeadersDirectory, getFilenameForKey(key));
+    }
+    
+    /**
+     * Returns a response file object for the given cache key.
+     */
+    public File getResponseFileForKey(String key) {
+        return new File(mResponsesDirectory, getFilenameForKey(key));
     }
 
     /**
@@ -262,7 +311,8 @@ public class DiskBasedCache implements Cache {
         while (iterator.hasNext()) {
             Map.Entry<String, CacheHeader> entry = iterator.next();
             CacheHeader e = entry.getValue();
-            boolean deleted = getFileForKey(e.key).delete();
+            boolean deleted = getHeaderFileForKey(e.key).delete();
+            deleted &= getResponseFileForKey(e.key).delete();
             if (deleted) {
                 mTotalSize -= e.size;
             } else {
@@ -361,6 +411,8 @@ public class DiskBasedCache implements Cache {
          */
         public CacheHeader(String key, Entry entry) {
             this.key = key;
+            
+            //TODO When adding support for streams, ensure that this value is kept accurate
             this.size = entry.data.length;
             this.etag = entry.etag;
             this.serverDate = entry.serverDate;
