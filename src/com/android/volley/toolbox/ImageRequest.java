@@ -68,18 +68,12 @@ public class ImageRequest extends Request<Bitmap> {
      */
     public ImageRequest(String url, Response.Listener<Bitmap> listener, int maxWidth, int maxHeight,
             Config decodeConfig, Response.ErrorListener errorListener) {
-        super(Method.GET, url, errorListener);
-        setRetryPolicy(
-                new DefaultRetryPolicy(IMAGE_TIMEOUT_MS, IMAGE_MAX_RETRIES, IMAGE_BACKOFF_MULT));
+        super(Method.GET, url, Priority.LOW, errorListener, new DefaultRetryPolicy(IMAGE_TIMEOUT_MS, IMAGE_MAX_RETRIES, IMAGE_BACKOFF_MULT));
+        
         mListener = listener;
         mDecodeConfig = decodeConfig;
         mMaxWidth = maxWidth;
         mMaxHeight = maxHeight;
-    }
-
-    @Override
-    public Priority getPriority() {
-        return Priority.LOW;
     }
 
     /**

@@ -38,7 +38,7 @@ public class ClearCacheRequest extends Request<Object> {
      * or null for none
      */
     public ClearCacheRequest(Cache cache, Runnable callback) {
-        super(Method.GET, null, null);
+        super(Method.GET, null, Priority.IMMEDIATE, null, null);
         mCache = cache;
         mCallback = callback;
     }
@@ -52,11 +52,6 @@ public class ClearCacheRequest extends Request<Object> {
             handler.postAtFrontOfQueue(mCallback);
         }
         return true;
-    }
-
-    @Override
-    public Priority getPriority() {
-        return Priority.IMMEDIATE;
     }
 
     @Override

@@ -112,6 +112,9 @@ public abstract class Request<T> implements Comparable<Request<T>> {
 
     /** An opaque token tagging this request; used for bulk cancellation. */
     private Object mTag;
+    
+    /** {@link Priority} for this request     */
+    private Priority mPriority;
 
     /**
      * Creates a new request with the given method (one of the values from {@link Method}),
@@ -130,8 +133,19 @@ public abstract class Request<T> implements Comparable<Request<T>> {
      * an already-parsed response.
      */
     public Request(int method, String url, Response.ErrorListener listener, RetryPolicy retryPolicy) {
+       this(method, url, Priority.NORMAL, listener, retryPolicy);
+    }
+    
+    /**
+     * Creates a new request with the given method (one of the values from {@link Method}),
+     * URL, priority, error listener and retry policy.  Note that the normal response listener is not provided here as
+     * delivery of responses is provided by subclasses, who have a better idea of how to deliver
+     * an already-parsed response.
+     */
+    public Request(int method, String url, Priority priority, Response.ErrorListener listener, RetryPolicy retryPolicy) {
         mMethod = method;
         mUrl = url;
+        mPriority = priority;
         mErrorListener = listener;
         setRetryPolicy((retryPolicy == null) ? new DefaultRetryPolicy() : retryPolicy);
 
@@ -444,12 +458,25 @@ public abstract class Request<T> implements Comparable<Request<T>> {
         HIGH,
         IMMEDIATE
     }
+    
+    /**
+     * Sets the priority for this request
+     * 
+     * @throws IllegalStateException If priority is changed after adding to request queue
+     */
+    public void setPriority(Priority priority) throws IllegalStateException {
+        
+        if(mRequestQueue != null) {
+            throw new IllegalStateException("Cannot change priority after adding to request queue");
+        }
+        mPriority = priority;
+    }
 
     /**
      * Returns the {@link Priority} of this request; {@link Priority#NORMAL} by default.
      */
-    public Priority getPriority() {
-        return Priority.NORMAL;
+    public final Priority getPriority() {
+        return mPriority;
     }
 
     /**
