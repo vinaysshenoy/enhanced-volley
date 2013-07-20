@@ -2,6 +2,9 @@
 
 An Enhanced version of the Volley Networking Tookit for Android
 
+## Warning
+This branch is unstable and temporary. Use at your own risk.
+
 ## License
 
 Copyright (C) 2011 The Android Open Source Project
