@@ -21,6 +21,8 @@ import java.util.HashMap;
 import java.util.LinkedList;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.Config;
 import android.os.Build;
@@ -70,6 +72,9 @@ public class ImageLoader {
 
     /** Runnable for in-flight response delivery. */
     private Runnable mRunnable;
+    
+    /** {@link Resources} instance for loading resource uris */
+    private Resources mResources;
 
     /**
      * Simple cache adapter interface. If provided to the ImageLoader, it
@@ -96,8 +101,19 @@ public class ImageLoader {
      * @param imageCache The cache to use as an L1 cache.
      */
     public ImageLoader(RequestQueue queue, ImageCache imageCache) {
+        this(queue, imageCache, null);
+    }
+    
+    /**
+     * Constructs a new ImageLoader.
+     * @param queue The RequestQueue to use for making image requests.
+     * @param imageCache The cache to use as an L1 cache.
+     * @param resources The Resources to use for loading resource uris
+     */
+    public ImageLoader(RequestQueue queue, ImageCache imageCache, Resources resources) {
         mRequestQueue = queue;
         mCache = imageCache;
+        mResources = resources;
     }
 
     /**
@@ -248,7 +264,7 @@ public class ImageLoader {
         // The request is not already in flight. Send the new request to the network and
         // track it.
         Request<?> newRequest =
-            new ImageRequest(requestUrl, new Listener<Bitmap>() {
+            new ImageRequest(requestUrl, mResources, new Listener<Bitmap>() {
                 @Override
                 public void onResponse(Bitmap response) {
                     onGetImageSuccess(cacheKey, response);
@@ -522,6 +538,14 @@ public class ImageLoader {
         return new StringBuilder(url.length() + 12).append("#W").append(maxWidth)
                 .append("#H").append(maxHeight).append(url).toString();
     }
+    
+    /**
+     * Set a {@link Resources} instance if you need to support resource uris for loading images
+     * @param resources {@link Resources} instance for loading images. Get from {@link Context#getResources()}
+     */
+    public void setResources(Resources resources) {
+    	mResources = resources;
+    }
 
     /**
      * Basic implementation of a Bitmap LRU cache to use
@@ -557,8 +581,6 @@ public class ImageLoader {
             };
 
         }
-
-
 
         @Override
         public Bitmap getBitmap(String key) {
