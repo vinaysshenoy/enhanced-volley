@@ -135,6 +135,7 @@ public class ImageRequest extends Request<Bitmap> {
         if (mMaxWidth == 0 && mMaxHeight == 0) {
             decodeOptions.inPreferredConfig = mDecodeConfig;
             bitmap = BitmapFactory.decodeByteArray(data, 0, data.length, decodeOptions);
+            addMarker("downloaded-full-size-image");
         } else {
             // If we have to resize this image, first get the natural bounds.
             decodeOptions.inJustDecodeBounds = true;
@@ -156,13 +157,15 @@ public class ImageRequest extends Request<Bitmap> {
                 findBestSampleSize(actualWidth, actualHeight, desiredWidth, desiredHeight);
             Bitmap tempBitmap =
                 BitmapFactory.decodeByteArray(data, 0, data.length, decodeOptions);
-
+            addMarker(String.format("downloaded-scaled-times-%d", decodeOptions.inSampleSize));
+            
             // If necessary, scale down to the maximal acceptable size.
             if (tempBitmap != null && (tempBitmap.getWidth() > desiredWidth ||
                     tempBitmap.getHeight() > desiredHeight)) {
                 bitmap = Bitmap.createScaledBitmap(tempBitmap,
                         desiredWidth, desiredHeight, true);
                 tempBitmap.recycle();
+                addMarker("scaling-downloaded-bitmap");
             } else {
                 bitmap = tempBitmap;
             }

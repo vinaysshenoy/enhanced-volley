@@ -21,7 +21,6 @@ import android.content.Context;
 import android.content.res.TypedArray;
 import android.text.TextUtils;
 import android.util.AttributeSet;
-import android.view.ViewGroup.LayoutParams;
 
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.ImageLoader.ImageContainer;
@@ -143,17 +142,6 @@ public class NetworkImageView extends AnimateImageView {
      *            True if this was invoked from a layout pass, false otherwise.
      */
     private void loadImageIfNecessary(final boolean isInLayoutPass) {
-        int width = getWidth();
-        int height = getHeight();
-
-        boolean isFullyWrapContent = getLayoutParams().height == LayoutParams.WRAP_CONTENT
-                && getLayoutParams().width == LayoutParams.WRAP_CONTENT;
-        // if the view's bounds aren't known yet, and this is not a
-        // wrap-content/wrap-content
-        // view, hold off on loading the image.
-        if (width == 0 && height == 0 && !isFullyWrapContent) {
-            return;
-        }
 
         // if the URL to be loaded in this view is empty, cancel any old
         // requests and clear the
@@ -218,7 +206,7 @@ public class NetworkImageView extends AnimateImageView {
                             setImageResource(mDefaultImageId);
                         }
                     }
-                });
+                }, getWidth(), getHeight());
 
         // update the ImageContainer to be the new bitmap container.
         mImageContainer = newContainer;
