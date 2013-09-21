@@ -133,7 +133,7 @@ public class NetworkDispatcher extends Thread {
 				if (request.shouldCache()) {
 
 					if(entry != null) {
-						entry.dataFilePath = FileUtils.fileCopy(networkResponse.getResponseStream(), mCache.getResponseFileForKey(request.getCacheKey()));
+						entry.dataFilePath = FileUtils.streamToFile(networkResponse.getResponseStream(), mCache.getResponseFileForKey(request.getCacheKey()));
 						networkResponse.setResponseStream(new FileInputStream(entry.dataFilePath));
 					} else {
 						request.setShouldCache(false);

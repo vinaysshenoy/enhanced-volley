@@ -167,8 +167,8 @@ public class BasicNetwork implements Network {
 			StatusLine statusLine) {
 		if (VolleyLog.sDebug || requestLifetime > SLOW_REQUEST_THRESHOLD_MS) {
 			VolleyLog.d(
-					"HTTP response for request=<%s> [lifetime=%d], [size=%s], "
-							+ "[retryCount=%s]", request, requestLifetime,
+					"HTTP response for request=<%s> [lifetime=%d], "
+							+ "[retryCount=%d]", request, requestLifetime,
 
 					request.getRetryPolicy().getCurrentRetryCount());
 		}
