@@ -18,12 +18,14 @@ package com.android.volley.toolbox;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 
 import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.NetworkResponse;
 import com.android.volley.ParseError;
 import com.android.volley.Request;
 import com.android.volley.Response;
+import com.android.volley.ServerError;
 import com.android.volley.VolleyLog;
 
 import android.content.res.Resources;
@@ -153,8 +155,7 @@ public class ImageRequest extends Request<Bitmap> {
 					return doParse(response);
 				}
 			} catch (OutOfMemoryError e) {
-				VolleyLog.e("Caught OOM for %d byte image, url=%s",
-						response.data.length, getUrl());
+				VolleyLog.e("Caught OOM for url=%s", getUrl());
 				return Response.error(new ParseError(e));
 			}
 		}
@@ -226,7 +227,7 @@ public class ImageRequest extends Request<Bitmap> {
 		if (bitmap == null) {
 			return Response.error(new ParseError());
 		} else {
-			return Response.success(bitmap, null);
+			return Response.success(bitmap);
 		}
 	}
 
@@ -293,7 +294,7 @@ public class ImageRequest extends Request<Bitmap> {
 		if (bitmap == null) {
 			return Response.error(new ParseError());
 		} else {
-			return Response.success(bitmap, null);
+			return Response.success(bitmap);
 		}
 	}
 
@@ -301,7 +302,14 @@ public class ImageRequest extends Request<Bitmap> {
 	 * The real guts of parseNetworkResponse. Broken out for readability.
 	 */
 	private Response<Bitmap> doParse(NetworkResponse response) {
-		byte[] data = response.data;
+		byte[] data;
+		try {
+			data = FileUtils.streamToBytes(response.getResponseStream());
+		} catch (ServerError e) {
+			return Response.error(new ParseError());
+		} catch (IOException e) {
+			return Response.error(new ParseError());
+		}
 		BitmapFactory.Options decodeOptions = new BitmapFactory.Options();
 		decodeOptions.inInputShareable = true;
 		decodeOptions.inPurgeable = true;
@@ -351,8 +359,7 @@ public class ImageRequest extends Request<Bitmap> {
 		if (bitmap == null) {
 			return Response.error(new ParseError());
 		} else {
-			return Response.success(bitmap,
-					HttpHeaderParser.parseCacheHeaders(response));
+			return Response.success(bitmap);
 		}
 	}
 

@@ -16,6 +16,8 @@
 
 package com.android.volley.toolbox;
 
+import java.io.File;
+
 import com.android.volley.Cache;
 
 /**
@@ -46,4 +48,14 @@ public class NoCache implements Cache {
     @Override
     public void initialize() {
     }
+
+	@Override
+	public File getHeaderFileForKey(String key) {
+		return null;
+	}
+
+	@Override
+	public File getResponseFileForKey(String key) {
+		return null;
+	}
 }

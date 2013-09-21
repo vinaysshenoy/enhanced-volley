@@ -17,11 +17,15 @@
 package com.android.volley.toolbox;
 
 import com.android.volley.NetworkResponse;
+import com.android.volley.ParseError;
 import com.android.volley.Request;
 import com.android.volley.Response;
 import com.android.volley.Response.ErrorListener;
 import com.android.volley.Response.Listener;
+import com.android.volley.ServerError;
+import com.android.volley.VolleyError;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 
 /**
@@ -64,10 +68,14 @@ public class StringRequest extends Request<String> {
     protected Response<String> parseNetworkResponse(NetworkResponse response) {
         String parsed;
         try {
-            parsed = new String(response.data, HttpHeaderParser.parseCharset(response.headers));
+            parsed = new String(FileUtils.streamToBytes(response.getResponseStream()), HttpHeaderParser.parseCharset(response.headers));
         } catch (UnsupportedEncodingException e) {
-            parsed = new String(response.data);
-        }
-        return Response.success(parsed, HttpHeaderParser.parseCacheHeaders(response));
+            return Response.error(new ParseError(e));
+        } catch (ServerError e) {
+        	return Response.error(new ParseError(e));
+		} catch (IOException e) {
+			return Response.error(new ParseError(e));
+		}
+        return Response.success(parsed);
     }
 }

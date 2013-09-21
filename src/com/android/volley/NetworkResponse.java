@@ -16,10 +16,11 @@
 
 package com.android.volley;
 
-import org.apache.http.HttpStatus;
-
+import java.io.InputStream;
 import java.util.Collections;
 import java.util.Map;
+
+import org.apache.http.HttpStatus;
 
 /**
  * Data and headers returned from {@link Network#performRequest(Request)}.
@@ -28,31 +29,45 @@ public class NetworkResponse {
     /**
      * Creates a new network response.
      * @param statusCode the HTTP status code
-     * @param data Response body
+     * @param responseStream the stream which holds the response body
      * @param headers Headers returned with this response, or null for none
      * @param notModified True if the server returned a 304 and the data was already in cache
      */
-    public NetworkResponse(int statusCode, byte[] data, Map<String, String> headers,
+    public NetworkResponse(int statusCode, InputStream responseStream, Map<String, String> headers,
             boolean notModified) {
         this.statusCode = statusCode;
-        this.data = data;
+        this.mResponseStream = responseStream;
         this.headers = headers;
         this.notModified = notModified;
     }
 
-    public NetworkResponse(byte[] data) {
-        this(HttpStatus.SC_OK, data, Collections.<String, String>emptyMap(), false);
+    public NetworkResponse(InputStream responseStream) {
+        this(HttpStatus.SC_OK, responseStream, Collections.<String, String>emptyMap(), false);
     }
 
-    public NetworkResponse(byte[] data, Map<String, String> headers) {
-        this(HttpStatus.SC_OK, data, headers, false);
+    public NetworkResponse(InputStream responseStream, Map<String, String> headers) {
+        this(HttpStatus.SC_OK, responseStream, headers, false);
+    }
+    
+    /**
+     * @return the response stream for this response
+     */
+    public InputStream getResponseStream() {
+    	return mResponseStream;
+    }
+    
+    /**
+     * Set the response stream
+     */
+    public void setResponseStream(InputStream in) {
+    	mResponseStream = in;
     }
 
     /** The HTTP status code. */
     public final int statusCode;
 
-    /** Raw data from this response. */
-    public final byte[] data;
+    /** Inputstream from this response */
+    private InputStream mResponseStream;
 
     /** Response headers. */
     public final Map<String, String> headers;

@@ -21,10 +21,12 @@ import com.android.volley.ParseError;
 import com.android.volley.Response;
 import com.android.volley.Response.ErrorListener;
 import com.android.volley.Response.Listener;
+import com.android.volley.ServerError;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 
 /**
@@ -46,13 +48,16 @@ public class JsonArrayRequest extends JsonRequest<JSONArray> {
     protected Response<JSONArray> parseNetworkResponse(NetworkResponse response) {
         try {
             String jsonString =
-                new String(response.data, HttpHeaderParser.parseCharset(response.headers));
-            return Response.success(new JSONArray(jsonString),
-                    HttpHeaderParser.parseCacheHeaders(response));
+                new String(FileUtils.streamToBytes(response.getResponseStream()));
+            return Response.success(new JSONArray(jsonString));
         } catch (UnsupportedEncodingException e) {
             return Response.error(new ParseError(e));
         } catch (JSONException je) {
             return Response.error(new ParseError(je));
-        }
+        } catch (ServerError e) {
+        	return Response.error(new ParseError(e));
+		} catch (IOException e) {
+			return Response.error(new ParseError(e));
+		}
     }
 }
